@@ -1,0 +1,176 @@
+// File: src/components/finance/AddAccountForm.tsx
+
+import { useState } from 'react';
+import type { AccountType } from '@/types/account';
+import { useAppContext } from '@/context/AppProvider';
+import { generateId } from '@/utils/uuid';
+import { Plus } from 'lucide-react';
+
+/**
+ * Controlled form for adding a new credit card or bank account.
+ * Validates required fields and warns (but allows) balance > limit.
+ */
+export function AddAccountForm() {
+  const { dispatch, state } = useAppContext();
+
+  const [name, setName] = useState('');
+  const [type, setType] = useState<AccountType>('credit_card');
+  const [creditLimit, setCreditLimit] = useState('');
+  const [currentBalance, setCurrentBalance] = useState('');
+  const [notes, setNotes] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const isDuplicate = state.accounts.some(
+    (a) => a.name.toLowerCase() === name.trim().toLowerCase()
+  );
+
+  function validate(): boolean {
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) newErrors.name = 'Name is required';
+    if (name.trim().length > 50) newErrors.name = 'Max 50 characters';
+
+    const limit = Number(creditLimit);
+    const balance = Number(currentBalance);
+
+    if (creditLimit !== '' && limit < 0) newErrors.creditLimit = 'Must be non-negative';
+    if (currentBalance !== '' && balance < 0) newErrors.currentBalance = 'Must be non-negative';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!validate()) return;
+
+    dispatch({
+      type: 'ADD_ACCOUNT',
+      payload: {
+        id: generateId(),
+        type,
+        name: name.trim(),
+        creditLimit: Math.max(0, Number(creditLimit) || 0),
+        currentBalance: Math.max(0, Number(currentBalance) || 0),
+        notes: notes.trim() || undefined,
+      },
+    });
+
+    // Reset form
+    setName('');
+    setCreditLimit('');
+    setCurrentBalance('');
+    setNotes('');
+    setErrors({});
+  }
+
+  const limit = Number(creditLimit) || 0;
+  const balance = Number(currentBalance) || 0;
+  const isOverLimit = limit > 0 && balance > limit;
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <h2 className="mb-4 text-lg font-semibold text-card-foreground">Add Account</h2>
+      <div className="space-y-3">
+        {/* Name */}
+        <div>
+          <label htmlFor="account-name" className="mb-1 block text-sm font-medium text-card-foreground">
+            Account Name <span className="text-destructive">*</span>
+          </label>
+          <input
+            id="account-name"
+            type="text"
+            maxLength={50}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Chase Sapphire"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            required
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? 'name-error' : undefined}
+          />
+          {errors.name && <p id="name-error" className="mt-1 text-xs text-destructive">{errors.name}</p>}
+          {isDuplicate && !errors.name && (
+            <p className="mt-1 text-xs text-warning">An account with this name already exists</p>
+          )}
+        </div>
+
+        {/* Type */}
+        <div>
+          <label htmlFor="account-type" className="mb-1 block text-sm font-medium text-card-foreground">
+            Account Type
+          </label>
+          <select
+            id="account-type"
+            value={type}
+            onChange={(e) => setType(e.target.value as AccountType)}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="credit_card">Credit Card</option>
+            <option value="bank_account">Bank Account</option>
+          </select>
+        </div>
+
+        {/* Limit + Balance row */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="credit-limit" className="mb-1 block text-sm font-medium text-card-foreground">
+              Credit Limit ($)
+            </label>
+            <input
+              id="credit-limit"
+              type="number"
+              min={0}
+              value={creditLimit}
+              onChange={(e) => setCreditLimit(e.target.value)}
+              placeholder="0"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              aria-invalid={!!errors.creditLimit}
+            />
+            {errors.creditLimit && <p className="mt-1 text-xs text-destructive">{errors.creditLimit}</p>}
+          </div>
+          <div>
+            <label htmlFor="current-balance" className="mb-1 block text-sm font-medium text-card-foreground">
+              Current Balance ($)
+            </label>
+            <input
+              id="current-balance"
+              type="number"
+              min={0}
+              value={currentBalance}
+              onChange={(e) => setCurrentBalance(e.target.value)}
+              placeholder="0"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              aria-invalid={!!errors.currentBalance}
+            />
+            {errors.currentBalance && <p className="mt-1 text-xs text-destructive">{errors.currentBalance}</p>}
+          </div>
+        </div>
+        {isOverLimit && (
+          <p className="text-xs text-warning">⚠️ Balance exceeds credit limit (over-limit)</p>
+        )}
+
+        {/* Notes */}
+        <div>
+          <label htmlFor="account-notes" className="mb-1 block text-sm font-medium text-card-foreground">
+            Notes <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <input
+            id="account-notes"
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Any additional notes..."
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <Plus className="h-4 w-4" /> Add Account
+        </button>
+      </div>
+    </form>
+  );
+}
