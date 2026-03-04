@@ -1,17 +1,13 @@
-// File: src/pages/Index.tsx
-
 import { AppProvider } from '@/context/AppProvider';
 import { Header } from '@/components/finance/Header';
 import { SummaryDashboard } from '@/components/finance/SummaryDashboard';
 import { AccountList } from '@/components/finance/AccountList';
 import { AddAccountForm } from '@/components/finance/AddAccountForm';
+import type { User } from '@supabase/supabase-js';
 
-/**
- * Main page — single-page credit tracker application.
- */
-const Index = () => {
+const Index = ({ user }: { user: User }) => {
   return (
-    <AppProvider>
+    <AppProvider user={user}>
       <div className="min-h-screen bg-background">
         <Header />
         <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">

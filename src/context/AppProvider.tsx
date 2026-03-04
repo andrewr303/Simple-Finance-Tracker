@@ -1,43 +1,12 @@
-// File: src/context/AppProvider.tsx
-
-import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
 import type { Account, AppState, AppAction } from '@/types/account';
+import { supabase } from '@/integrations/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
-const STORAGE_KEY = 'credit-tracker-accounts';
-
-/**
- * Attempts to read and parse accounts from localStorage.
- * Returns an empty array on failure (e.g., private browsing mode).
- */
-function loadFromStorage(): Account[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    // localStorage unavailable or corrupted — degrade gracefully
-    return [];
-  }
-}
-
-/**
- * Attempts to persist accounts to localStorage.
- * Silently fails if storage is unavailable.
- */
-function saveToStorage(accounts: Account[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
-  } catch {
-    // Silently ignore — user will lose data on refresh but app won't crash
-  }
-}
-
-/**
- * Reducer handling all account CRUD operations.
- */
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+    case 'SET_ACCOUNTS':
+      return { accounts: action.payload };
     case 'ADD_ACCOUNT':
       return { accounts: [...state.accounts, action.payload] };
     case 'UPDATE_ACCOUNT':
@@ -58,35 +27,98 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextValue {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  addAccount: (account: Omit<Account, 'id'>) => Promise<void>;
+  updateAccount: (account: Account) => Promise<void>;
+  deleteAccount: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
 
-/**
- * Provides application state (accounts) and dispatch to all children.
- * Hydrates from localStorage on mount and syncs on every state change.
- */
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, { accounts: [] }, () => ({
-    accounts: loadFromStorage(),
-  }));
+export function AppProvider({ children, user }: { children: ReactNode; user: User }) {
+  const [state, dispatch] = useReducer(appReducer, { accounts: [] });
 
-  // Sync state to localStorage whenever accounts change
+  // Load accounts from database
   useEffect(() => {
-    saveToStorage(state.accounts);
-  }, [state.accounts]);
+    async function load() {
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (!error && data) {
+        dispatch({
+          type: 'SET_ACCOUNTS',
+          payload: data.map((row) => ({
+            id: row.id,
+            type: row.type as Account['type'],
+            name: row.name,
+            creditLimit: Number(row.credit_limit),
+            currentBalance: Number(row.current_balance),
+            notes: row.notes ?? undefined,
+          })),
+        });
+      }
+    }
+    load();
+  }, [user.id]);
+
+  const addAccount = useCallback(async (account: Omit<Account, 'id'>) => {
+    const { data, error } = await supabase
+      .from('accounts')
+      .insert({
+        user_id: user.id,
+        type: account.type,
+        name: account.name,
+        credit_limit: account.creditLimit,
+        current_balance: account.currentBalance,
+        notes: account.notes ?? null,
+      })
+      .select()
+      .single();
+    if (!error && data) {
+      dispatch({
+        type: 'ADD_ACCOUNT',
+        payload: {
+          id: data.id,
+          type: data.type as Account['type'],
+          name: data.name,
+          creditLimit: Number(data.credit_limit),
+          currentBalance: Number(data.current_balance),
+          notes: data.notes ?? undefined,
+        },
+      });
+    }
+  }, [user.id]);
+
+  const updateAccount = useCallback(async (account: Account) => {
+    const { error } = await supabase
+      .from('accounts')
+      .update({
+        name: account.name,
+        type: account.type,
+        credit_limit: account.creditLimit,
+        current_balance: account.currentBalance,
+        notes: account.notes ?? null,
+      })
+      .eq('id', account.id);
+    if (!error) {
+      dispatch({ type: 'UPDATE_ACCOUNT', payload: account });
+    }
+  }, []);
+
+  const deleteAccount = useCallback(async (id: string) => {
+    const { error } = await supabase.from('accounts').delete().eq('id', id);
+    if (!error) {
+      dispatch({ type: 'DELETE_ACCOUNT', payload: { id } });
+    }
+  }, []);
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, addAccount, updateAccount, deleteAccount }}>
       {children}
     </AppContext.Provider>
   );
 }
 
-/**
- * Hook to access the app context. Must be used within an AppProvider.
- * @throws Error if used outside of AppProvider
- */
 export function useAppContext(): AppContextValue {
   const ctx = useContext(AppContext);
   if (!ctx) {
