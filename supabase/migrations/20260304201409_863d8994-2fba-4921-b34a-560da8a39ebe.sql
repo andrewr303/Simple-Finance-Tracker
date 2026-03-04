@@ -1,0 +1,1 @@
+ALTER TABLE public.accounts ADD COLUMN spend_power numeric DEFAULT NULL;

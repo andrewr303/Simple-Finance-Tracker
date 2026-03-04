@@ -53,6 +53,7 @@ export function AppProvider({ children, user }: { children: ReactNode; user: Use
             name: row.name,
             creditLimit: Number(row.credit_limit),
             currentBalance: Number(row.current_balance),
+            spendPower: row.spend_power != null ? Number(row.spend_power) : null,
             notes: row.notes ?? undefined,
           })),
         });
@@ -70,6 +71,7 @@ export function AppProvider({ children, user }: { children: ReactNode; user: Use
         name: account.name,
         credit_limit: account.creditLimit,
         current_balance: account.currentBalance,
+        spend_power: account.spendPower ?? null,
         notes: account.notes ?? null,
       })
       .select()
@@ -83,6 +85,7 @@ export function AppProvider({ children, user }: { children: ReactNode; user: Use
           name: data.name,
           creditLimit: Number(data.credit_limit),
           currentBalance: Number(data.current_balance),
+          spendPower: data.spend_power != null ? Number(data.spend_power) : null,
           notes: data.notes ?? undefined,
         },
       });
@@ -97,6 +100,7 @@ export function AppProvider({ children, user }: { children: ReactNode; user: Use
         type: account.type,
         credit_limit: account.creditLimit,
         current_balance: account.currentBalance,
+        spend_power: account.spendPower ?? null,
         notes: account.notes ?? null,
       })
       .eq('id', account.id);

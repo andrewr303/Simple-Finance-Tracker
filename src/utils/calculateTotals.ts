@@ -28,10 +28,15 @@ export interface Totals {
 export function calculateTotals(accounts: Account[]): Totals {
   const totalCreditLimit = accounts.reduce((sum, a) => sum + a.creditLimit, 0);
   const totalBalance = accounts.reduce((sum, a) => sum + a.currentBalance, 0);
+  // Use spend_power when available for more accurate available credit
+  const totalAvailableCredit = accounts.reduce((sum, a) => {
+    if (a.spendPower != null) return sum + a.spendPower;
+    return sum + (a.creditLimit - a.currentBalance);
+  }, 0);
   return {
     totalCreditLimit,
     totalBalance,
-    totalAvailableCredit: totalCreditLimit - totalBalance,
+    totalAvailableCredit,
   };
 }
 

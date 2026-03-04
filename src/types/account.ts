@@ -6,6 +6,8 @@ export interface Account {
   name: string;
   creditLimit: number;
   currentBalance: number;
+  /** When set, overrides currentBalance for available credit calculation */
+  spendPower?: number | null;
   notes?: string;
 }
 
