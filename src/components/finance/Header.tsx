@@ -14,7 +14,7 @@ export function Header() {
             <CreditCard className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-card-foreground sm:text-2xl">Credit Tracker</h1>
+            <h1 className="text-xl font-bold tracking-tight text-card-foreground sm:text-2xl">Simple Finance Tracker</h1>
             <p className="text-sm text-muted-foreground">Track your credit cards &amp; bank accounts</p>
           </div>
         </div>

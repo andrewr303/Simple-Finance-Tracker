@@ -1,4 +1,4 @@
-# My Money Compass
+# Simple Finance Tracker
 
 **One dashboard for every card and account you own.**
 
@@ -14,7 +14,7 @@ Track credit limits, live balances, available credit, and spend power across all
 
 ## Overview
 
-My Money Compass is a personal finance tracker that consolidates credit cards and bank accounts into a single, clean dashboard. After signing in, users see a live summary of total credit limits, current balances, and remaining available credit — updated instantly as accounts are added, edited, or removed.
+Simple Finance Tracker is a personal finance tracker that consolidates credit cards and bank accounts into a single, clean dashboard. After signing in, users see a live summary of total credit limits, current balances, and remaining available credit — updated instantly as accounts are added, edited, or removed.
 
 Health indicators (color-coded green / yellow / red) surface accounts approaching their limit at a glance, and an optional **spend power** field lets users override the raw available-credit calculation when a card issuer reports a different figure.
 
